@@ -15,6 +15,7 @@ import random
 import sys
 import os
 import sip
+import json
 
 class MatplotlibCanvas(FigureCanvasQTAgg):
 	def __init__(self,parent=None, dpi = 200):
@@ -35,6 +36,10 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.label_tag = False
         self.prefixOutputName = 'out_label'
         self.listIns = np.array([[97.027,1,97.032,-1.25],[97.06,1,97.068,-1.25]]) # n*4 with (x,y - top-left -> bot-right)
+        self.labelMask = None
+        self.header = dict({'src_path':'','des_path':'','index':0})
+        self.name_out_file = None
+        
         
 
         self.setupUi(self)
@@ -84,8 +89,8 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
     def readData(self):
         
         base_name = os.path.basename(self.filename)
-        self.source = os.path.dirname(self.filename)
         self.title = os.path.splitext(base_name)[0]
+        self.name_out_file = os.path.join(self.destination,"label_"+self.title+".csv")
         # try:
         with open(self.filename, 'r') as file:
             lines = file.readlines()
@@ -96,7 +101,21 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
 
         # Create a DataFrame
         self.df = pd.DataFrame({'time': time_list, 'value': value_list})
+        self.labelMask = [0] * len(self.df['time'])
         # print(self.df.head(10))
+        if os.path.exists(os.path.join(self.destination,"log.txt")):
+            # If the file exists, read the JSON string from the file
+            with open(os.path.join(self.destination,"log.txt"), 'r') as file:
+                json_string = file.read()
+            # Convert the JSON string to a dictionary
+            json_string = json.loads(json_string)
+            self.destination = json_string['des_path']
+            self.filename = json_string['src_path']
+            self.index = json_string['index']
+            
+        else:
+            self.header = dict({'src_path':self.filename,'des_path':self.destination,'index':self.index})
+        
         self.Update()
         # except Exception as e:
         #     print("An error occured: ",e)
@@ -108,9 +127,38 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.destination_path.setText(sp_src)
      
     def trueLabel(self): # true label pressed, instances is assign to true
-        pass
+        
+
+        try:
+            start_index = np.where(self.df['time'] == self.listIns[self.index][0])[0][0]
+            end_index = np.where(self.df['time'] == self.listIns[self.index][2])[0][0]
+            # print(start_index,end_index)
+            self.labelMask[start_index:end_index] = [1]* (end_index-start_index)
+            self.df['labelMask'] = self.labelMask
+            self.df.to_csv(self.name_out_file, index=False)
+            self.index +=1
+            self.Update()
+        except:
+            print("Done job.")
+            self.close()
+
+        
+
     def falseLabel(self):# intance assign to false
-        pass
+
+        try:
+            start_index = np.where(self.df['time'] == self.listIns[self.index][0])[0][0]
+            end_index = np.where(self.df['time'] == self.listIns[self.index][2])[0][0]
+            # print(start_index,end_index)
+            self.labelMask[start_index:end_index] = [0]* (end_index-start_index)
+            self.df['labelMask'] = self.labelMask
+            self.df.to_csv(self.name_out_file, index=False)
+            self.index +=1
+            self.Update()
+        except:
+            print("Done job.")
+            self.close()
+        
     
     def backwardIns(self): #back to previous instance
          pass
@@ -118,15 +166,7 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
          pass
     def jumpTo(self): #Jump to specific positoin < current position
          pass
-    
-    def saveState(self):
-        '''purposes of this function is save 
-        - file name (processing)
-        - index of order instance
-        - output path
-        - the last save file
-        '''
-        pass
+
 
     def Update(self):
         plt.clf()
@@ -138,6 +178,15 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         sip.delete(self.toolbar)
         self.canv = None
         self.toolbar = None
+        self.displayCur.display(self.index)
+
+        self.header['src_path'] = self.filename
+        self.header['des_path'] = self.destination
+        self.header['index'] = self.index
+        save_log = json.dumps(self.header)
+        with open(os.path.join(self.destination,'log.txt'), 'w') as file:
+            file.write(save_log)
+        
         
         # Reinitialize the canvas and toolbar
         self.canv = MatplotlibCanvas(self)
@@ -152,17 +201,21 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         ax.set_ylabel('Voltage (V)')
         # self.df.reset_index(drop=True, inplace=True)  # Reset index to ensure time values are treated as data
         self.df.plot(x='time',y='value', ax=ax, legend=True)  # Plot the DataFrame with specified y column
-        xy = (self.listIns[self.index][0],self.listIns[self.index][1])
-        width = self.listIns[self.index][-2]-self.listIns[self.index][0]
-        height = self.listIns[self.index][-1]-self.listIns[self.index][1]
-        rect = patches.Rectangle(xy,
+        try:
+            xy = (self.listIns[self.index][0],self.listIns[self.index][1])
+            width = self.listIns[self.index][-2]-self.listIns[self.index][0]
+            height = self.listIns[self.index][-1]-self.listIns[self.index][1]
+            rect = patches.Rectangle(xy,
                                  width=width,
                                  height=height,
                                  linewidth=1,edgecolor ='r',
                                  facecolor = 'None')
-        print(xy,width,height)
-        ax.add_patch(rect)
-        self.canv.draw()
+            ax.add_patch(rect)
+            self.canv.draw()
+        except Exception as e:
+            print(f'This job is already done !')
+            self.close()
+        
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(sys.argv)
