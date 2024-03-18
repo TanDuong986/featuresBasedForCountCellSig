@@ -1,11 +1,12 @@
 import main
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QDialog, QGridLayout
-from PyQt5.QtCore import QTimer, QDateTime, Qt
+from PyQt5.QtWidgets import QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as Navi
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QFileDialog
+import matplotlib.patches as patches 
+import matplotlib.pyplot as plt
 
 import uuid
 import numpy as np
@@ -13,9 +14,10 @@ import pandas as pd
 import random
 import sys
 import os
+import sip
 
 class MatplotlibCanvas(FigureCanvasQTAgg):
-	def __init__(self,parent=None, dpi = 300):
+	def __init__(self,parent=None, dpi = 200):
 		fig = Figure(dpi = dpi)
 		self.axes = fig.add_subplot(111)
 		super(MatplotlibCanvas,self).__init__(fig)
@@ -31,8 +33,14 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.cur1 ='' #path of lastest file saved
         self.label_tag = False
         self.prefixOutputName = 'out_label'
+        
 
         self.setupUi(self)
+        self.canv = MatplotlibCanvas(self)
+        self.toolbar = Navi(self.canv, self)
+        self.toolbarLayout = QVBoxLayout(self.toolBarBox)
+        self.toolbarLayout.addWidget(self.toolbar)
+
         # self.showFullScreen()
         self.showMaximized()
         self.setWindowTitle("Demo version")
@@ -40,14 +48,12 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.false_button.clicked.connect(self.falseLabel)
         self.actionContinue.triggered.connect(self.getFile)
         self.actionExport.triggered.connect(self.choiceExport)
+        self.actionExit.triggered.connect(self.close)
         self.backward.clicked.connect(self.backwardIns)
         self.forward.clicked.connect(self.forwardIns)
         self.Jump.clicked.connect(self.jumpTo)
 
-        self.canv = MatplotlibCanvas(self)
-        self.toolbar = Navi(self.canv,self.centralwidget)
-        self.toolbarLayout = QVBoxLayout(self.toolBarBox)
-        self.toolbarLayout.addWidget(self.toolbar)
+        
 
     def getFile(self):
         """ This function will get the address of the csv file location
@@ -78,19 +84,20 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         base_name = os.path.basename(self.filename)
         self.source = os.path.dirname(self.filename)
         self.title = os.path.splitext(base_name)[0]
-        try:
-            with open(self.filename, 'r') as file:
-                lines = file.readlines()
+        # try:
+        with open(self.filename, 'r') as file:
+            lines = file.readlines()
 
-            # Parse lines into lists of time and value using list comprehensions
-            time_list = [float(line.split()[0]) for line in lines]
-            value_list = [float(line.split()[1]) for line in lines]
+        # Parse lines into lists of time and value using list comprehensions
+        time_list = [float(line.split()[0]) for line in lines]
+        value_list = [float(line.split()[1]) for line in lines]
 
-            # Create a DataFrame
-            self.df = pd.DataFrame({'time': time_list, 'value': value_list})
-            # print(self.df.head(10))
-        except Exception as e:
-            print("An error occured: ",e)
+        # Create a DataFrame
+        self.df = pd.DataFrame({'time': time_list, 'value': value_list})
+        # print(self.df.head(10))
+        self.Update()
+        # except Exception as e:
+        #     print("An error occured: ",e)
     
     def choiceExport(self):
         self.destination = QFileDialog.getExistingDirectory(None, "Select a folder")
@@ -120,13 +127,33 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         pass
 
     def Update(self):
-         pass
-         
+        plt.clf()
         
-	
+        # Remove the existing canvas and toolbar
+        self.graph_layout.removeWidget(self.canv)
+        self.toolbarLayout.removeWidget(self.toolbar)
+        sip.delete(self.canv)
+        sip.delete(self.toolbar)
+        self.canv = None
+        self.toolbar = None
+        
+        # Reinitialize the canvas and toolbar
+        self.canv = MatplotlibCanvas(self)
+        self.toolbar = Navi(self.canv, self.centralwidget)
+        self.toolbarLayout.addWidget(self.toolbar)
+        self.graph_layout.addWidget(self.canv)
+
+        # Clear the axes and plot the DataFrame
+        self.canv.axes.cla()
+        ax = self.canv.axes
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Voltage (V)')
+        # self.df.reset_index(drop=True, inplace=True)  # Reset index to ensure time values are treated as data
+        self.df.plot(x='time',y='value', ax=ax, legend=True)  # Plot the DataFrame with specified y column
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(sys.argv)
 	qt_app = LabelApp()
 	qt_app.show()
 	app.exec_()
+
