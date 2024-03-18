@@ -173,6 +173,12 @@
             <layout class="QGridLayout" name="gridLayout_10">
              <item row="1" column="3">
               <widget class="QFrame" name="frame_10">
+               <property name="minimumSize">
+                <size>
+                 <width>550</width>
+                 <height>0</height>
+                </size>
+               </property>
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
@@ -245,9 +251,24 @@
                       <widget class="QLCDNumber" name="displayCur">
                        <property name="maximumSize">
                         <size>
-                         <width>50</width>
+                         <width>250</width>
                          <height>50</height>
                         </size>
+                       </property>
+                       <property name="smallDecimalPoint">
+                        <bool>false</bool>
+                       </property>
+                       <property name="digitCount">
+                        <number>5</number>
+                       </property>
+                       <property name="segmentStyle">
+                        <enum>QLCDNumber::Flat</enum>
+                       </property>
+                       <property name="value" stdset="0">
+                        <double>99999.000000000000000</double>
+                       </property>
+                       <property name="intValue" stdset="0">
+                        <number>99999</number>
                        </property>
                       </widget>
                      </item>
@@ -302,7 +323,7 @@
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>200</width>
+                         <width>1600000</width>
                          <height>16777215</height>
                         </size>
                        </property>
@@ -472,19 +493,6 @@
                </layout>
               </widget>
              </item>
-             <item row="1" column="2">
-              <spacer name="horizontalSpacer">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
              <item row="1" column="0">
               <widget class="QFrame" name="configuration">
                <property name="minimumSize">
@@ -495,7 +503,7 @@
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>300</width>
+                 <width>160000</width>
                  <height>100</height>
                 </size>
                </property>
@@ -540,6 +548,19 @@
                 </item>
                </layout>
               </widget>
+             </item>
+             <item row="1" column="2">
+              <spacer name="horizontalSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
              </item>
             </layout>
            </widget>

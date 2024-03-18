@@ -30,9 +30,11 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.title =''
         self.df = None
         self.destination =''
-        self.cur1 ='' #path of lastest file saved
+        self.cur1_path ='' #path of lastest file saved
+        self.index =0
         self.label_tag = False
         self.prefixOutputName = 'out_label'
+        self.listIns = np.array([[97.027,1,97.032,-1.25],[97.06,1,97.068,-1.25]]) # n*4 with (x,y - top-left -> bot-right)
         
 
         self.setupUi(self)
@@ -150,6 +152,17 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         ax.set_ylabel('Voltage (V)')
         # self.df.reset_index(drop=True, inplace=True)  # Reset index to ensure time values are treated as data
         self.df.plot(x='time',y='value', ax=ax, legend=True)  # Plot the DataFrame with specified y column
+        xy = (self.listIns[self.index][0],self.listIns[self.index][1])
+        width = self.listIns[self.index][-2]-self.listIns[self.index][0]
+        height = self.listIns[self.index][-1]-self.listIns[self.index][1]
+        rect = patches.Rectangle(xy,
+                                 width=width,
+                                 height=height,
+                                 linewidth=1,edgecolor ='r',
+                                 facecolor = 'None')
+        print(xy,width,height)
+        ax.add_patch(rect)
+        self.canv.draw()
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(sys.argv)

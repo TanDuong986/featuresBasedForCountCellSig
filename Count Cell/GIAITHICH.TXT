@@ -1,0 +1,5 @@
+Cái này mình chạy file_split trước, thứ tự em có để như trong file:
+	- Lọc phần dữ liệu thừa ở file data.txt, dùng hàm data_taking.
+	- Đọc dữ liệu từ data.txt, lấy được 2 vector time với value rồi chạy tìm thời gian xuất hiện đỉnh đáy để dùng data split lọc.
+	- Time reference là em tạo để tham chiếu ngược về tập dữ liệu gốc để tạo giá trị 0-2 cho cột 3.
+	- Tạo xong 3 cột thì chia thành các file nhỏ, khoảng tgian cách đều là 1e-4
