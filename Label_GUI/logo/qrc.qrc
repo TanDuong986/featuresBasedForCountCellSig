@@ -1,0 +1,12 @@
+<RCC>
+  <qresource prefix="logo_icon">
+    <file>switch.png</file>
+    <file>continuous-improvement.png</file>
+    <file>new.png</file>
+    <file>accept.png</file>
+    <file>cross.png</file>
+    <file>folder.png</file>
+    <file>Logo25-18.png</file>
+    <file>LOGO_TRUONG_CO_NEN.png</file>
+  </qresource>
+</RCC>
