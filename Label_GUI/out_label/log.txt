@@ -1,1 +1,0 @@
-{"src_path": "/home/dtan986/Documents/countCell/Label_GUI/file17.1.txt", "des_path": "/home/dtan986/Documents/countCell/Label_GUI/out_label", "index": 2}
