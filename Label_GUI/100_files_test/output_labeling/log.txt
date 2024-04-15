@@ -1,0 +1,1 @@
+{"src_path": "/home/dtan986/Documents/featuresBasedForCountCellSig/Label_GUI/100_files_test", "des_path": "/home/dtan986/Documents/featuresBasedForCountCellSig/Label_GUI/100_files_test/output_labeling", "sum_file": 6, "index": 41, "left_list": []}
