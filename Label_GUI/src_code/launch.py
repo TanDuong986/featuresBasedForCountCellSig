@@ -89,25 +89,15 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.out_folder_all = os.path.join(self.source_folder_path,self.prefixOutputFolder) # out_folder_all is ouput folder
         
         # self.all_input_path_src = os.path.basename([i for i in glob.glob(self.source_folder_path + "/*.txt")])
-        self.all_input_file_name = os.listdir(self.source_folder_path)
+        self.all_input_file_name = [os.path.basename(file) for file in glob.glob(os.path.join(self.source_folder_path, '*.txt'))]
         self.num_file_all = len(self.all_input_file_name)
-        self.num_file_left = self.num_file_all
 
-
-        if not os.path.exists(self.out_folder_all):
+        if not os.path.exists(self.out_folder_all): #check xem da co folder out chua
             os.makedirs(self.out_folder_all)
             print(f'(X) Output label folder does not exist. Created at \t{self.out_folder_all}')
         else:
             print(f"(V) Out folder have been existed at \t {self.out_folder_all}")
         
-        self.filename = self.all_input_file_name.pop() # lay file cuoi de cho vao chay luot dau tien
-        # sp_src = self.shorcut_path(self.source_folder_path)
-        sp_src = self.shorcut_path(self.filename) # thay vi hien thi folder source, hien thi file dang thuc thi, cap nhat theo update khi next file moi
-        sp_des = self.shorcut_path(self.out_folder_all)
-
-        
-        self.src_path.setText(sp_src) # source path
-        self.destination_path.setText(sp_des)
         self.readData()
 
     def shorcut_path(self,path):
@@ -116,42 +106,56 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         return sp
     
     def readData(self):
-        
-        # check xem co file log chua (log cho toan the folder source)
+        self.data_processed=DataProcessing()
+        self.left_list = self.all_input_file_name
+        self.num_file_left = self.num_file_all
+
+        # khi da co file log thi vao day de lay tham so
         if os.path.exists(os.path.join(self.out_folder_all,"log.txt")):
             # If the file exists, read the JSON string from the file
             with open(os.path.join(self.out_folder_all,"log.txt"), 'r') as file:
                 json_string = file.read()
-            # Convert the JSON string to a dictionary
-            json_string = json.loads(json_string)
-            self.out_folder_all = json_string['des_path']
-            self.source_folder_path = json_string['src_path']
-            self.num_file_all = int(json_string['sum_file'])
-            self.index = json_string['index']
-            self.left_list = json_string['left_list']
-            self.num_file_left = len(self.left_list)
+                # Convert the JSON string to a dictionary
+                json_string = json.loads(json_string)
+                self.out_folder_all = json_string['des_path']
+                self.source_folder_path = json_string['src_path']
+                self.num_file_all = int(json_string['sum_file'])
+                # self.index = json_string['index']
+                self.left_list = list(json_string['left_list'])
+                self.num_file_left = len(self.left_list)
             
-        else:
+        else: # chua co file log thi khai bao cac bien o day
             self.header = dict({'src_path':self.source_folder_path,'des_path':self.out_folder_all,
                                 'sum_file':self.num_file_all,'index':self.index,
                                 'left_list':self.left_list})
+            
+        self.filename = self.left_list.pop() # lay file cuoi de cho vao chay luot dau tien
+        
+        print(f'left list is {self.left_list}')
+        print(f'path de mo la {os.path.join(self.source_folder_path,self.filename)}')
+
+        sp_src = self.shorcut_path(self.filename) # thay vi hien thi folder source, hien thi file dang thuc thi, cap nhat theo update khi next file moi
+        sp_des = self.shorcut_path(self.out_folder_all)
+
+        
+        self.src_path.setText(sp_src) # source path
+        self.destination_path.setText(sp_des)
         
         self.title = os.path.splitext(self.filename)[0] # file_12323
+        
         # print(f'\n\n {self.out_folder_all}\n {self.title}')
         self.name_out_file = os.path.join(self.out_folder_all,"label_"+self.title+".csv") # label for each indivisual csv file in 
-
-        print(f'path de mo la {os.path.join(self.source_folder_path,self.filename)}')
         # try:
         with open(os.path.join(self.source_folder_path,self.filename), 'r') as file:
             lines = file.readlines()
-        # Parse lines into lists of time and value using list comprehensions
-        self.time_list = [float(line.split()[0]) for line in lines]
-        self.value_list = [float(line.split()[1]) for line in lines]
+            # Parse lines into lists of time and value using list comprehensions
+            self.time_list = [float(line.split()[0]) for line in lines]
+            self.value_list = [float(line.split()[1]) for line in lines]
 
-        # Create a DataFrame
-        self.df = pd.DataFrame({'time': self.time_list, 'value': self.value_list})
-        self.labelMask = [0] * len(self.df['time'])
-        # print(self.df.head(10))
+            # Create a DataFrame
+            self.df = pd.DataFrame({'time': self.time_list, 'value': self.value_list})
+            self.labelMask = [0] * len(self.df['time'])
+            # print(self.df.head(10))
         
         self.Update()
         # except Exception as e:
@@ -164,23 +168,24 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.out_folder_all.setText(sp_src)
 
     def trueLabel(self): # true label pressed, instances is assign to true
-        try:
-
-            if self.num_box_done == len(self.data_processed.box):
-                self.filename = self.all_input_file_name.pop()
-                self.num_box_done =0
-                self.readData()
-                return
-            start_index=self.data_processed.mark_index[self.index][0]
-            end_index=self.data_processed.mark_index[self.index][1]
-            self.labelMask[start_index:end_index] = [1]* (end_index-start_index)
-            self.df['labelMask'] = self.labelMask
-            self.df.to_csv(self.name_out_file, index=False)
-            self.index +=1
-            self.Update()
-        except:
-            print("Done job.")
-            self.close()
+        # try:
+        print(f'numbox done now is {self.num_box_done}')
+        if self.num_box_done == len(self.data_processed.box):
+            # self.filename = self.all_input_file_name.pop()
+            self.num_box_done =0
+            self.index = 0
+            self.readData()
+            return
+        start_index=self.data_processed.mark_index[self.index][0]
+        end_index=self.data_processed.mark_index[self.index][1]
+        self.labelMask[start_index:end_index] = [1]* (end_index-start_index)
+        self.df['labelMask'] = self.labelMask
+        self.df.to_csv(self.name_out_file, index=False)
+        self.index +=1
+        self.Update()
+        # except:
+        #     print("Done job.")
+        #     self.close()
         
 
     def falseLabel(self):# intance assign to false
@@ -202,14 +207,12 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
             print("Done job.")
             self.close()
         
-    
     def backwardIns(self): #back to previous instance
          pass
     def forwardIns(self):
          pass
     def jumpTo(self): #Jump to specific positoin < current position
          pass
-
 
     def Update(self):
         plt.clf()
@@ -307,6 +310,7 @@ class DataProcessing:
         # plt.plot(time,value)
 
     def data_split(self,data_time,data_value):
+        self.box=[]
         total_time=self.true_peak_time+self.true_trough_time
         total_time=sorted(total_time)
 
