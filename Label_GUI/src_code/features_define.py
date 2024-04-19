@@ -9,7 +9,7 @@ def axis_fix(signal_data_time):
 
 #Khoảng cách euclid giữa 2 điểm đầu và cuối
 def e_distance(signal_data_time, signal_data_value):
-    signal_data_time=axis_fix(signal_data_time,signal_data_value)
+    signal_data_time=axis_fix(signal_data_time)
     euclid_distance=np.sqrt((signal_data_time[-1]-signal_data_time[0])**2+(signal_data_value[-1]-signal_data_value[0])**2)
 
     return euclid_distance
@@ -43,7 +43,7 @@ def cut_points_difference(signal_data_value):
 #Độ dốc tại các mốc đỉnh và hai biên
 def left_slope(signal_data_time,signal_data_value):
     #Lấy các giá trị đầu cuối và thời gian tương ứng
-    signal_data_time=axis_fix(signal_data_time, signal_data_value)
+    signal_data_time=axis_fix(signal_data_time)
     left_point_value=signal_data_value[0]
     right_point_value=max(signal_data_value)
     left_point_time=signal_data_time[0]
@@ -56,7 +56,7 @@ def left_slope(signal_data_time,signal_data_value):
 
 def middle_slope(signal_data_time,signal_data_value):
     #Lấy các giá trị đầu cuối và thời gian tương ứng
-    signal_data_time=axis_fix(signal_data_time, signal_data_value)
+    signal_data_time=axis_fix(signal_data_time)
     left_point_value=max(signal_data_value)
     right_point_value=min(signal_data_value)
     left_point_time=signal_data_time[signal_data_value.index(left_point_value)]
@@ -69,7 +69,7 @@ def middle_slope(signal_data_time,signal_data_value):
 
 def right_slope(signal_data_time,signal_data_value):
     #Lấy các giá trị đầu cuối và thời gian tương ứng
-    signal_data_time=axis_fix(signal_data_time, signal_data_value)
+    signal_data_time=axis_fix(signal_data_time)
     left_point_value=min(signal_data_value)
     right_point_value=signal_data_value[-1]
     left_point_time=signal_data_time(signal_data_value.index(left_point_value))
@@ -97,7 +97,7 @@ def left_elipse_fitting(signal_data_time,signal_data_value):
         return abs(area / 2.0)  
 
     #Fix trục time theo value
-    signal_data_time=axis_fix(signal_data_time,signal_data_value)
+    signal_data_time=axis_fix(signal_data_time)
 
     #Lấy nửa phần dữ liệu bên trái
     top_peak=max(signal_data_value)
@@ -147,7 +147,7 @@ def right_elipse_fitting(signal_data_time,signal_data_value):
         return abs(area / 2.0)  
 
     #Fix trục time theo value
-    signal_data_time=axis_fix(signal_data_time,signal_data_value)
+    signal_data_time=axis_fix(signal_data_time)
 
     #Lấy nửa phần dữ liệu bên trái
     top_peak=max(signal_data_value)
