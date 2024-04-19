@@ -2,14 +2,8 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 #Điều chỉnh hệ số tương quan giữa 2 trục time và value
-def axis_fix(signal_data_time,signal_data_value):
-    signal_max_value=max(signal_data_value)
-    signal_min_value=min(signal_data_value)
-    signal_max_time=signal_data_time[-1]
-    signal_min_time=signal_data_time[0]
-
-    f_alpha=float(signal_max_value-signal_min_value)/float(signal_max_time-signal_min_time)
-    signal_data_time=np.array(signal_data_time)*f_alpha
+def axis_fix(signal_data_time):
+    signal_data_time=np.array(signal_data_time)*800
 
     return signal_data_time
 
