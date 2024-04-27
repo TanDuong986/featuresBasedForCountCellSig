@@ -8,15 +8,17 @@ from PyQt5.QtWidgets import QFileDialog
 import matplotlib.patches as patches 
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
+import itertools
 
-import uuid
 import numpy as np
 import pandas as pd
-import random
+import glob
 import sys
 import os
 import sip
 import json
+
+nickname = 'dtan986'
 
 class MatplotlibCanvas(FigureCanvasQTAgg):
 	def __init__(self,parent=None, dpi = 200):
@@ -31,13 +33,21 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.filename = ''
         self.title =''
         self.df = None
-        self.destination =''
-        self.cur1_path ='' #path of lastest file saved
-        self.index =0
+        self.out_folder_all =''
+        self.index =0 # for counting only
         self.label_tag = False
-        self.prefixOutputName = 'out_label'
+        self.prefixOutputFolder = 'output_labeling'
         self.time_list=[]
         self.value_list=[]
+        self.left_list =[]
+        self.all_input_file_name = []
+
+        # self.current_file_name = ''
+        self.display_index =0 # index for display choose in terminal
+        self.num_file_all = 0
+        self.num_file_left = 0
+        self.num_box_done = 0
+
         self.data_processed=DataProcessing()
         # try:
         #     self.data_processed.peak_detect(self.time_list,self.value_list)
@@ -46,10 +56,8 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         #     pass
         #self.listIns = np.array([[97.027,1,97.032,-1.25],[97.06,1,97.068,-1.25]]) # n*4 with (x,y - top-left -> bot-right)
         self.labelMask = None
-        self.header = dict({'src_path':'','des_path':'','index':self.index})
+        self.header = dict({'src_path':'','des_path':'','sum_file':0,'index':self.index,'left_list':''})
         self.name_out_file = None
-        
-        
 
         self.setupUi(self)
         self.canv = MatplotlibCanvas(self)
@@ -69,111 +77,129 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.forward.clicked.connect(self.forwardIns)
         self.Jump.clicked.connect(self.jumpTo)
 
-    # #Tạo setter và getter cho time_list và value_list
-    # @property
-    # def time_list(self):
-    #     return self._time_list
-    
-    # @time_list.setter
-    # def time_list(self, new_time_list):
-    #     self._time_list=new_time_list
-
-    # @property
-    # def value_list(self):
-    #     return self._value_list
-    
-    # @value_list.setter
-    # def value_list(self,new_value_list):
-    #     self._value_list=new_value_list
-
+    def resett_val(self): #reset number of index and add name file to save log
+        pass
 
     def getFile(self):
         """ This function will get the address of the csv file location
             also calls a readData function 
         """
-        self.filename = QFileDialog.getOpenFileName(filter="txt (*.txt)")[0]
-        self.destination = os.path.join(os.path.dirname(self.filename),self.prefixOutputName)
-        if not os.path.exists(self.destination):
-            os.makedirs(self.destination)
-            print(f"(X) Output label folder does not exist. Created !!!.")
-        else:
-            print(f"(V) Out folder have been existed")
-
+        # self.filename = QFileDialog.getOpenFileName(filter="txt (*.txt)")[0]
+        self.source_folder_path = QFileDialog.getExistingDirectory(caption='Select source data folder')
+        self.out_folder_all = os.path.join(self.source_folder_path,self.prefixOutputFolder) # out_folder_all is ouput folder
         
-        sp_src = self.shorcut_path(self.filename)
-        sp_des = self.shorcut_path(self.destination)
+        # self.all_input_path_src = os.path.basename([i for i in glob.glob(self.source_folder_path + "/*.txt")])
+        self.all_input_file_name = [os.path.basename(file) for file in glob.glob(os.path.join(self.source_folder_path, '*.txt'))]
+        self.num_file_all = len(self.all_input_file_name)
 
-        self.src_path.setText(sp_src) # source path
-        self.destination_path.setText(sp_des)
+        if not os.path.exists(self.out_folder_all): #check xem da co folder out chua
+            os.makedirs(self.out_folder_all)
+            print(f'(X) Output folder does not exist. Created at \n{self.out_folder_all}\n')
+        else:
+            print(f"(V) Out folder have been existed at \n{self.out_folder_all}\n")
+        
         self.readData()
 
     def shorcut_path(self,path):
         parts = path.split("/")
-        sp = ".../"+ "/".join(parts[-4:])
+        sp = ".../"+ "/".join(parts[-3:])
         return sp
+    
     def readData(self):
-        
-        base_name = os.path.basename(self.filename)
-        self.title = os.path.splitext(base_name)[0]
-        self.name_out_file = os.path.join(self.destination,"label_"+self.title+".csv")
-        # try:
-        with open(self.filename, 'r') as file:
-            lines = file.readlines()
+        self.data_processed=DataProcessing()
+        # self.left_list = self.all_input_file_name
+        self.num_file_left = self.num_file_all
 
-        # Parse lines into lists of time and value using list comprehensions
-        time = [float(line.split()[0]) for line in lines]
-        value = [float(line.split()[1]) for line in lines]
-
-        # Create a DataFrame
-        self.df = pd.DataFrame({'time': time, 'value': value})
-        self.labelMask = [0] * len(self.df['time'])
-        # print(self.df.head(10))
-        if os.path.exists(os.path.join(self.destination,"log.txt")):
+        # khi da co file log thi vao day de lay tham so
+        if os.path.exists(os.path.join(self.out_folder_all,"log.txt")):
+            # print("da co file log roi")
             # If the file exists, read the JSON string from the file
-            with open(os.path.join(self.destination,"log.txt"), 'r') as file:
+            with open(os.path.join(self.out_folder_all,"log.txt"), 'r') as file:
                 json_string = file.read()
-            # Convert the JSON string to a dictionary
-            json_string = json.loads(json_string)
-            self.destination = json_string['des_path']
-            self.filename = json_string['src_path']
-            self.index = json_string['index']
+                # Convert the JSON string to a dictionary
+                json_string = json.loads(json_string)
+                self.out_folder_all = json_string['des_path']
+                self.source_folder_path = json_string['src_path']
+                self.num_file_all = int(json_string['sum_file'])
+                # self.index = json_string['index']
+                self.left_list = list(json_string['left_list'])
+                #print(f'day la danh sach log left {self.left_list}')
+                self.num_file_left = len(self.left_list)
             
-        else:
-            self.header = dict({'src_path':self.filename,'des_path':self.destination,'index':self.index})
+        else: # chua co file log thi khai bao cac bien o day
+            # print('ghi nhan la chua co file log nha ')
+            self.left_list = self.all_input_file_name
+            self.header = dict({'src_path':self.source_folder_path,'des_path':self.out_folder_all,
+                                'sum_file':self.num_file_all,'index':self.index,
+                                'left_list':self.left_list})
+    
+        self.filename = self.left_list[-1] # lay file cuoi de cho vao chay luot dau tien
+    
+        # print(f'left list is {self.left_list}')
+        # print(f'path de mo la {os.path.join(self.source_folder_path,self.filename)}')
+
+        sp_src = self.shorcut_path(self.filename) # thay vi hien thi folder source, hien thi file dang thuc thi, cap nhat theo update khi next file moi
+        sp_des = self.shorcut_path(self.out_folder_all)
+
+        
+        self.src_path.setText(sp_src) # source path
+        self.destination_path.setText(sp_des)
+        
+        self.title = os.path.splitext(self.filename)[0] # file_12323
+        
+        # print(f'\n\n {self.out_folder_all}\n {self.title}')
+        self.name_out_file = os.path.join(self.out_folder_all,"label_"+self.title+".csv") # label for each indivisual csv file in 
+        # try:
+        with open(os.path.join(self.source_folder_path,self.filename), 'r') as file:
+            lines = file.readlines()
+            # Parse lines into lists of time and value using list comprehensions
+            self.time_list = [float(line.split()[0]) for line in lines]
+            self.value_list = [float(line.split()[1]) for line in lines]
+
+            # Create a DataFrame
+            self.data_processed.peak_detect(self.time_list,self.value_list)
+            filtered_data_time=self.data_processed.data_split(self.time_list,self.value_list)
+            reference_time=list(itertools.chain.from_iterable(filtered_data_time))
+            signalMask=[0]*len(self.time_list)
+            self.df = pd.DataFrame({'time': self.time_list, 'value': self.value_list,'signalMask':signalMask})
+            self.df.loc[self.df['time'].isin(reference_time), 'signalMask'] = -1
+            self.labelMask = [0] * len(self.df['time'])
+            # print(self.df.head(10))
         
         self.Update()
         # except Exception as e:
-        #     print("An error occured: ",e)
-        
+        #     print(f'[{nickname}] Error in read file {self.filename}, error is: {e}')
+
     def choiceExport(self):
-        self.destination = QFileDialog.getExistingDirectory(None, "Select a folder")
-        print(f'path choice is {self.destination}')
-        sp_src = self.shorcut_path(self.destination)
-        self.destination_path.setText(sp_src)
-     
-    def Update_readdata(self):
-        with open(self.filename, 'r') as file:
-            lines = file.readlines()
-
-        # Parse lines into lists of time and value using list comprehensions
-        time = [float(line.split()[0]) for line in lines]
-        value = [float(line.split()[1]) for line in lines]
-
-        self.time_list=time
-        self.value_list=value
+        self.out_folder_all = QFileDialog.getExistingDirectory(None, "Select a folder")
+        print(f'path choice is {self.out_folder_all}')
+        sp_src = self.shorcut_path(self.out_folder_all)
+        self.out_folder_all.setText(sp_src)
 
     def trueLabel(self): # true label pressed, instances is assign to true
         try:
-            # self.readData()
-            # self.data_processed.peak_detect(self.time_list,self.value_list)
-            # self.data_processed.data_split(self.time_list,self.value_list)
-            # start_index = np.where(self.df['time'] == self.listIns[self.index][0])[0][0]
-            # end_index = np.where(self.df['time'] == self.listIns[self.index][2])[0][0]
+            if self.num_box_done == len(self.data_processed.box):
+                #Cập nhật label của instance cuối cùng
+                start_index=self.data_processed.mark_index[self.index][0]
+                end_index=self.data_processed.mark_index[self.index][1]
+                self.labelMask[start_index:end_index+1] = [2]* (end_index-start_index+1)
+                self.df['labelMask'] = self.labelMask
+                self.df["finalLabel"] = self.df[["signalMask", "labelMask"]].apply(sum, axis=1)
+                self.df.to_csv(self.name_out_file, index=False,float_format='%.6f')
+                
+                # self.filename = self.all_input_file_name.pop()
+                self.num_box_done =0
+                self.index = 0
+                self.filename = self.left_list.pop()
+                self.save_state()
+                self.readData()
+                return
             start_index=self.data_processed.mark_index[self.index][0]
             end_index=self.data_processed.mark_index[self.index][1]
-            self.labelMask[start_index:end_index] = [1]* (end_index-start_index)
+            self.labelMask[start_index:end_index+1] = [2]* (end_index-start_index+1)
             self.df['labelMask'] = self.labelMask
-            self.df.to_csv(self.name_out_file, index=False)
+            self.df["finalLabel"] = self.df[["signalMask", "labelMask"]].apply(sum, axis=1)
+            self.df.to_csv(self.name_out_file, index=False,float_format='%.6f')
             self.index +=1
             self.Update()
         except:
@@ -188,35 +214,54 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
             # self.data_processed.data_split(self.time_list,self.value_list)
             # start_index = np.where(self.df['time'] == self.listIns[self.index][0])[0][0]
             # end_index = np.where(self.df['time'] == self.listIns[self.index][2])[0][0]
+            if self.num_box_done == len(self.data_processed.box):
+                # self.filename = self.all_input_file_name.pop()
+                self.num_box_done =0
+                self.index = 0
+                self.filename = self.left_list.pop()
+                self.save_state()
+                self.readData()
+                return
             start_index=self.data_processed.mark_index[self.index][0]
             end_index=self.data_processed.mark_index[self.index][1]
             # print(start_index,end_index)
-            self.labelMask[start_index:end_index] = [0]* (end_index-start_index)
+            self.labelMask[start_index:end_index+1] = [0]* (end_index-start_index+1)
             self.df['labelMask'] = self.labelMask
-            self.df.to_csv(self.name_out_file, index=False)
+            self.df["finalLabel"] = self.df[["signalMask", "labelMask"]].apply(sum, axis=1)
+            self.df.to_csv(self.name_out_file,index=False, float_format='%.6f')
             self.index +=1
             self.Update()
         except:
             print("Done job.")
             self.close()
         
-    
     def backwardIns(self): #back to previous instance
          pass
     def forwardIns(self):
          pass
     def jumpTo(self): #Jump to specific positoin < current position
          pass
-
+    
+    def save_state(self):
+        self.header['src_path'] = self.source_folder_path
+        self.header['des_path'] = self.out_folder_all
+        self.header['index'] = self.index
+        self.header['left_list'] = self.left_list
+        self.header['sum_file'] = self.num_file_all
+        save_log = json.dumps(self.header)
+        with open(os.path.join(self.out_folder_all,'log.txt'), 'w') as file:
+            file.write(save_log)
 
     def Update(self):
         plt.clf()
         
         #Cập nhật dữ liệu ban đầu cho def Update
-        self.Update_readdata()
+        # self.Update_readdata()
         self.data_processed.peak_detect(self.time_list,self.value_list)
         self.data_processed.data_split(self.time_list,self.value_list)
-        
+        if self.num_box_done < len(self.data_processed.box):
+            self.num_box_done +=1
+
         # Remove the existing canvas and toolbar
         self.graph_layout.removeWidget(self.canv)
         self.toolbarLayout.removeWidget(self.toolbar)
@@ -225,14 +270,8 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.canv = None
         self.toolbar = None
         self.displayCur.display(self.index)
-
-        self.header['src_path'] = self.filename
-        self.header['des_path'] = self.destination
-        self.header['index'] = self.index
-        save_log = json.dumps(self.header)
-        with open(os.path.join(self.destination,'log.txt'), 'w') as file:
-            file.write(save_log)
         
+        self.save_state()
         
         # Reinitialize the canvas and toolbar
         self.canv = MatplotlibCanvas(self)
@@ -301,6 +340,7 @@ class DataProcessing:
         # plt.plot(time,value)
 
     def data_split(self,data_time,data_value):
+        self.box=[]
         total_time=self.true_peak_time+self.true_trough_time
         total_time=sorted(total_time)
 
@@ -334,7 +374,6 @@ class DataProcessing:
         #Lấy từng cặp đỉnh đáy tương ứng để tham chiếu
         filtered_data_value=[]
         filtered_data_time=[]
-        self.box=[]
 
         for i in range(int(((len(total_time)/2)))):
 
@@ -428,14 +467,6 @@ class DataProcessing:
             filtered_data_time.append(signal_data_time)
 
         #Lấy các cụm tế bào
-        def remove_duplicates(lst):
-            element_count = {}
-            result = []
-            for item in lst:
-                if element_count.get(item, 0) == 0:
-                    element_count[item] = 1
-                    result.append(item)
-            return result
         
         #Gộp các tín hiệu có phần dữ liệu chung
         for count in range(len(filtered_data_time)-1):
@@ -447,9 +478,8 @@ class DataProcessing:
         filtered_data_time=[time for time in filtered_data_time if time!=[0]]
         
         for last_count in range(len(filtered_data_time)):
-            filtered_data_time[last_count]=remove_duplicates(filtered_data_time[last_count]) 
+            filtered_data_time[last_count]=self.remove_duplicates(filtered_data_time[last_count]) 
         
-
         #Tham chiếu lại value cho phần cụm 
         for vector_number in range(len(filtered_data_time)):
             signal_data_value=[]
@@ -475,10 +505,21 @@ class DataProcessing:
             i_box=[xleft_value,ytop_value,xright_value,ybottom_value]
             self.box.append(i_box)
             self.mark_index.append(mark)
+        print(f'Number of box is {len(self.box)}')
+
+        return filtered_data_time
+    
+    def remove_duplicates(self,lst):
+            element_count = {}
+            result = []
+            for item in lst:
+                if element_count.get(item, 0) == 0:
+                    element_count[item] = 1
+                    result.append(item)
+            return result
     
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(sys.argv)
 	qt_app = LabelApp()
 	qt_app.show()
 	app.exec_()
-
