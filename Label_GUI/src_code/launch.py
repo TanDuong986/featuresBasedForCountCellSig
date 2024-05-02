@@ -132,9 +132,13 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
             self.header = dict({'src_path':self.source_folder_path,'des_path':self.out_folder_all,
                                 'sum_file':self.num_file_all,'index':self.index,
                                 'left_list':self.left_list})
-    
-        self.filename = self.left_list[-1] # lay file cuoi de cho vao chay luot dau tien
-    
+
+        try:
+            self.filename = self.left_list[-1] # lay file cuoi de cho vao chay luot dau tien
+        except:
+            print("Done job!")
+            self.close()
+            sys.exit()
         # print(f'left list is {self.left_list}')
         # print(f'path de mo la {os.path.join(self.source_folder_path,self.filename)}')
 
@@ -157,14 +161,22 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
             self.value_list = [float(line.split()[1]) for line in lines]
 
             # Create a DataFrame
-            self.data_processed.peak_detect(self.time_list,self.value_list)
-            filtered_data_time=self.data_processed.data_split(self.time_list,self.value_list)
-            reference_time=list(itertools.chain.from_iterable(filtered_data_time))
-            signalMask=[0]*len(self.time_list)
-            self.df = pd.DataFrame({'time': self.time_list, 'value': self.value_list,'signalMask':signalMask})
-            self.df.loc[self.df['time'].isin(reference_time), 'signalMask'] = -1
-            self.labelMask = [0] * len(self.df['time'])
-            # print(self.df.head(10))
+            try:
+                self.data_processed.peak_detect(self.time_list,self.value_list)
+                filtered_data_time=self.data_processed.data_split(self.time_list,self.value_list)
+                reference_time=list(itertools.chain.from_iterable(filtered_data_time))
+                signalMask=[0]*len(self.time_list)
+                self.df = pd.DataFrame({'time': self.time_list, 'value': self.value_list,'signalMask':signalMask})
+                self.df.loc[self.df['time'].isin(reference_time), 'signalMask'] = -1
+                self.labelMask = [0] * len(self.df['time'])
+                
+            except:
+                self.num_box_done =0
+                self.index = 0
+                self.filename = self.left_list.pop()
+                self.save_state()
+                self.readData()
+                return
         
         self.Update()
         # except Exception as e:
@@ -177,34 +189,35 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         self.out_folder_all.setText(sp_src)
 
     def trueLabel(self): # true label pressed, instances is assign to true
-        try:
-            if self.num_box_done == len(self.data_processed.box):
-                #Cập nhật label của instance cuối cùng
-                start_index=self.data_processed.mark_index[self.index][0]
-                end_index=self.data_processed.mark_index[self.index][1]
-                self.labelMask[start_index:end_index+1] = [2]* (end_index-start_index+1)
-                self.df['labelMask'] = self.labelMask
-                self.df["finalLabel"] = self.df[["signalMask", "labelMask"]].apply(sum, axis=1)
-                self.df.to_csv(self.name_out_file, index=False,float_format='%.6f')
-                
-                # self.filename = self.all_input_file_name.pop()
-                self.num_box_done =0
-                self.index = 0
-                self.filename = self.left_list.pop()
-                self.save_state()
-                self.readData()
-                return
+        # try:
+        if self.num_box_done == len(self.data_processed.box):
+            #Cập nhật label của instance cuối cùng
             start_index=self.data_processed.mark_index[self.index][0]
             end_index=self.data_processed.mark_index[self.index][1]
             self.labelMask[start_index:end_index+1] = [2]* (end_index-start_index+1)
             self.df['labelMask'] = self.labelMask
             self.df["finalLabel"] = self.df[["signalMask", "labelMask"]].apply(sum, axis=1)
             self.df.to_csv(self.name_out_file, index=False,float_format='%.6f')
-            self.index +=1
-            self.Update()
-        except:
-            print("Done job.")
-            self.close()
+            
+            # self.filename = self.all_input_file_name.pop()
+            self.num_box_done =0
+            self.index = 0
+            self.filename = self.left_list.pop()
+            self.save_state()
+            self.readData()
+            return
+        start_index=self.data_processed.mark_index[self.index][0]
+        end_index=self.data_processed.mark_index[self.index][1]
+        self.labelMask[start_index:end_index+1] = [2]* (end_index-start_index+1)
+        self.df['labelMask'] = self.labelMask
+        self.df["finalLabel"] = self.df[["signalMask", "labelMask"]].apply(sum, axis=1)
+        self.df.to_csv(self.name_out_file, index=False,float_format='%.6f')
+        self.index +=1
+        self.Update()
+
+        # except Exception as e:
+        #     print(f'Error is: {e}')
+        #     self.close()
         
 
     def falseLabel(self):# intance assign to false
@@ -231,8 +244,13 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
             self.df.to_csv(self.name_out_file,index=False, float_format='%.6f')
             self.index +=1
             self.Update()
+        # except IndexError:
+        #     self.num_box_done =0
+        #     self.index = 0
+        #     self.filename = self.left_list.pop()
+        #     self.save_state()
+        #     self.readData()
         except:
-            print("Done job.")
             self.close()
         
     def backwardIns(self): #back to previous instance
@@ -312,6 +330,7 @@ class DataProcessing:
         self.true_trough_time=[]
         self.box=[]
         self.mark_index=[]
+
     def peak_detect(self,data_time,data_value):
 
         peaks,_ =find_peaks(data_value,height=1e-1,prominence=1e-1)
@@ -340,6 +359,7 @@ class DataProcessing:
         # plt.plot(time,value)
 
     def data_split(self,data_time,data_value):
+        self.errorCheck=0
         self.box=[]
         total_time=self.true_peak_time+self.true_trough_time
         total_time=sorted(total_time)
@@ -505,7 +525,7 @@ class DataProcessing:
             i_box=[xleft_value,ytop_value,xright_value,ybottom_value]
             self.box.append(i_box)
             self.mark_index.append(mark)
-        print(f'Number of box is {len(self.box)}')
+        # print(f'Number of box is {len(self.box)}')
 
         return filtered_data_time
     
