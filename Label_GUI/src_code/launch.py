@@ -307,7 +307,6 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
             y_max = self.df['value'].max()
             #self.df.reset_index(drop=True, inplace=True)  # Reset index to ensure time values are treated as data
             self.df.plot(x='time',y='value', ax=ax, legend=True,ylim=(1.2*y_min,1.2*y_max))  # Plot the DataFrame with specified y column
-            
             # try:
             #xy = (self.listIns[self.index][0],self.listIns[self.index][1])
             xy= (self.data_processed.box[self.index][0],self.data_processed.box[self.index][1])
