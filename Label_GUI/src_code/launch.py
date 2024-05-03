@@ -275,40 +275,45 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
         
         #Cập nhật dữ liệu ban đầu cho def Update
         # self.Update_readdata()
-        self.data_processed.peak_detect(self.time_list,self.value_list)
-        self.data_processed.data_split(self.time_list,self.value_list)
-        if self.num_box_done < len(self.data_processed.box):
-            self.num_box_done +=1
-
-        # Remove the existing canvas and toolbar
-        self.graph_layout.removeWidget(self.canv)
-        self.toolbarLayout.removeWidget(self.toolbar)
-        sip.delete(self.canv)
-        sip.delete(self.toolbar)
-        self.canv = None
-        self.toolbar = None
-        self.displayCur.display(self.index)
-        
-        self.save_state()
-        
-        # Reinitialize the canvas and toolbar
-        self.canv = MatplotlibCanvas(self)
-        self.toolbar = Navi(self.canv, self.centralwidget)
-        self.toolbarLayout.addWidget(self.toolbar)
-        self.graph_layout.addWidget(self.canv)
-
-        # Clear the axes and plot the DataFrame
-        self.canv.axes.cla()
-        ax = self.canv.axes
-        ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Voltage (V)')
-        #self.df.reset_index(drop=True, inplace=True)  # Reset index to ensure time values are treated as data
-        self.df.plot(x='time',y='value', ax=ax, legend=True)  # Plot the DataFrame with specified y column
         try:
+            self.data_processed.peak_detect(self.time_list,self.value_list)
+            self.data_processed.data_split(self.time_list,self.value_list)
+            if self.num_box_done < len(self.data_processed.box):
+                self.num_box_done +=1
+
+            # Remove the existing canvas and toolbar
+            self.graph_layout.removeWidget(self.canv)
+            self.toolbarLayout.removeWidget(self.toolbar)
+            sip.delete(self.canv)
+            sip.delete(self.toolbar)
+            self.canv = None
+            self.toolbar = None
+            self.displayCur.display(self.index)
+            
+            self.save_state()
+            
+            # Reinitialize the canvas and toolbar
+            self.canv = MatplotlibCanvas(self)
+            self.toolbar = Navi(self.canv, self.centralwidget)
+            self.toolbarLayout.addWidget(self.toolbar)
+            self.graph_layout.addWidget(self.canv)
+
+            # Clear the axes and plot the DataFrame
+            self.canv.axes.cla()
+            ax = self.canv.axes
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Voltage (V)')
+            y_min = self.df['value'].min()
+            y_max = self.df['value'].max()
+            #self.df.reset_index(drop=True, inplace=True)  # Reset index to ensure time values are treated as data
+            self.df.plot(x='time',y='value', ax=ax, legend=True,ylim=(1.2*y_min,1.2*y_max))  # Plot the DataFrame with specified y column
+            
+            # try:
             #xy = (self.listIns[self.index][0],self.listIns[self.index][1])
             xy= (self.data_processed.box[self.index][0],self.data_processed.box[self.index][1])
                 # width = self.listIns[self.index][-2]-self.listIns[self.index][0]
                 # height = self.listIns[self.index][-1]-self.listIns[self.index][1]
+            
             width = self.data_processed.box[self.index][-2]-self.data_processed.box[self.index][0]
             height = self.data_processed.box[self.index][-1]-self.data_processed.box[self.index][1]
             rect = patches.Rectangle(xy,
@@ -318,10 +323,16 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
                                     facecolor = 'None')
             ax.add_patch(rect)
             self.canv.draw()
-
-        except IndexError:
-            print(f'This job is already done !')
-            self.close()
+        except:
+            self.num_box_done =0
+            self.index = 0
+            self.filename = self.left_list.pop()
+            self.save_state()
+            self.readData()
+            return
+        # except Exception as e:
+        #     print(f'This job is already done ! {e}')
+        #     self.close()
         
 class DataProcessing:
     def __init__(self):
