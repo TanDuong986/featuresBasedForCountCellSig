@@ -250,7 +250,7 @@ class Ui_MainWindow(object):
         self.graph_layout = QtWidgets.QVBoxLayout()
         self.graph_layout.setObjectName("graph_layout")
         self.gridLayout_7.addLayout(self.graph_layout, 1, 0, 1, 1)
-        self.gridLayout_10.addWidget(self.graph_frame, 0, 0, 1, 4)
+        self.gridLayout_10.addWidget(self.graph_frame, 0, 0, 1, 5)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.gridLayout_10.addItem(spacerItem, 1, 2, 1, 1)
         self.gridLayout_9.addWidget(self.frame_5, 0, 0, 1, 1)
