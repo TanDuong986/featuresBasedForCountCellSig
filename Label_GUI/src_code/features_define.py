@@ -1,189 +1,135 @@
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.spatial.distance import euclidean
+import cvxpy as cp
+import matplotlib.pyplot as plt
+import pandas as pd
+from itertools import groupby
+from scipy.optimize import minimize
+import read_label_files
+from ellipse import LsqEllipse
 
-#Điều chỉnh hệ số tương quan giữa 2 trục time và value
-def axis_fix(signal_data_time,signal_data_value):
-    signal_max_value=max(signal_data_value)
-    signal_min_value=min(signal_data_value)
-    signal_max_time=signal_data_time[-1]
-    signal_min_time=signal_data_time[0]
+class FeatureDefine():
+    def __init__(self,value,time):
+        self.value = value
+        self.time=time
+        self.numpoint = len(value)
+        self.label = False
+        self.left_list = []
+        self.right_list = []
+        self.ellipse_left = None
+        self.ellipse_right = None
 
-    f_alpha=float(signal_max_value-signal_min_value)/float(signal_max_time-signal_min_time)
-    signal_data_time=np.array(signal_data_time)*f_alpha
-
-    return signal_data_time
-
-#Khoảng cách euclid giữa 2 điểm đầu và cuối
-def e_distance(signal_data_time, signal_data_value):
-    signal_data_time=axis_fix(signal_data_time,signal_data_value)
-    euclid_distance=np.sqrt((signal_data_time[-1]-signal_data_time[0])**2+(signal_data_value[-1]-signal_data_value[0])**2)
-
-    return euclid_distance
-
-#Khoảng chênh lệch theo phương dọc của 2 điểm đầu và cuối
-def margin_difference(signal_data_value):
-    signal_margin_diff=abs(signal_data_value[0]-signal_data_value[1])
-    
-    return signal_margin_diff
-
-#Độ chênh lệch về giá trị của 2 đỉnh trên dưới
-def peak_difference_proportion(signal_data_value):
-    top_peak=max(signal_data_value)
-    bot_peak=min(signal_data_value)
-    if top_peak>abs(bot_peak):
-        top_bot_diff=top_peak/(abs(bot_peak))
-    else:
-        top_bot_diff=abs(bot_peak)/top_peak
-
-    return top_bot_diff
-
-#Chênh lệch theo phương dọc của 2 giá trị tại đường cắt đôi tín hiệu
-def cut_points_difference(signal_data_value):
-    half_divide=np.array_split(signal_data_value,2)
-    half_left=half_divide[0]
-    half_right=half_divide[1]
-    half_diff=abs(half_left[-1]-half_right[0])
-
-    return half_diff
-
-#Độ dốc tại các mốc đỉnh và hai biên
-def left_slope(signal_data_time,signal_data_value):
-    #Lấy các giá trị đầu cuối và thời gian tương ứng
-    signal_data_time=axis_fix(signal_data_time, signal_data_value)
-    left_point_value=signal_data_value[0]
-    right_point_value=max(signal_data_value)
-    left_point_time=signal_data_time[0]
-    right_point_time=signal_data_time[signal_data_value.index(right_point_value)]
-
-    #Tính góc
-    left_angle=np.tan((right_point_time-left_point_time)/(right_point_value-left_point_value))
-
-    return left_angle
-
-def middle_slope(signal_data_time,signal_data_value):
-    #Lấy các giá trị đầu cuối và thời gian tương ứng
-    signal_data_time=axis_fix(signal_data_time, signal_data_value)
-    left_point_value=max(signal_data_value)
-    right_point_value=min(signal_data_value)
-    left_point_time=signal_data_time[signal_data_value.index(left_point_value)]
-    right_point_time=signal_data_time[signal_data_value.index(right_point_value)]
-
-    #Tính góc
-    middle_angle=np.tan((right_point_time-left_point_time)/(right_point_value-left_point_value))
-
-    return middle_angle
-
-def right_slope(signal_data_time,signal_data_value):
-    #Lấy các giá trị đầu cuối và thời gian tương ứng
-    signal_data_time=axis_fix(signal_data_time, signal_data_value)
-    left_point_value=min(signal_data_value)
-    right_point_value=signal_data_value[-1]
-    left_point_time=signal_data_time(signal_data_value.index(left_point_value))
-    right_point_time=signal_data_time[-1]
-
-    #Tính góc
-    right_angle=np.tan((right_point_time-left_point_time)/(right_point_value-left_point_value))
-
-    return right_angle
-
-#Elipse fit với tín hiệu khi được chia đôi
-def left_elipse_fitting(signal_data_time,signal_data_value):
-    def ellipse_func(x, a, b, c, d, e):
-        return a * np.cos(2 * np.pi * x / b) + c + d * np.sin(2 * np.pi * x / b) + e
-    
-    def shoelace_area(signal_data_time,signal_data_value):
-        # Triển khai công thức Shoelace
-        area = 0
-        for signal_point in range(len(signal_data_time) - 1):
-            area +=(signal_data_time[signal_point]*signal_data_value[signal_point+1]) - (signal_data_time[signal_point + 1]*signal_data_value[signal_point])
-
-        # Xử lý đa giác kín (kết nối điểm cuối cùng với điểm đầu tiên)
-        area += (signal_data_time[-1] * signal_data_value[0]) - (signal_data_time[0] * signal_data_value[-1])
-
-        return abs(area / 2.0)  
-
-    #Fix trục time theo value
-    signal_data_time=axis_fix(signal_data_time,signal_data_value)
-
-    #Lấy nửa phần dữ liệu bên trái
-    top_peak=max(signal_data_value)
-    bot_peak=min(signal_data_value)
-    index_difference=signal_data_value.index(bot_peak)-signal_data_value.index(top_peak)
-    cut_point=int(index_difference/2)+signal_data_value.index(top_peak)
-
-    half_left_value=signal_data_value[:cut_point]
-    half_left_time=signal_data_time[:cut_point]
-
-    #Thực hiện tìm giá trị bán trục lớn và nhỏ
-    a0 = 0.01  
-    b0 = 0.01  
-    c0 = 0.01  
-    d0 = 0.01  
-    e0 = 0.01  
-
-    # Thực hiện fitting
-    popt_left,_ = curve_fit(ellipse_func, half_left_time, half_left_value, p0=[a0, b0, c0, d0, e0])
-
-    #Tính diện tích ellipse
-    a=popt_left[0]
-    b=popt_left[1]
-    Se=np.pi*a*b
-
-    #Diện tích phần lồi
-    bulge_area=shoelace_area(half_left_time,half_left_value)
+        self.prop_left =0
+        self.prop_right =0
         
-    #Độ fit với ellipse
-    fit_percentage=(Se-bulge_area)/Se
-
-    return fit_percentage
-
-def right_elipse_fitting(signal_data_time,signal_data_value):
-    def ellipse_func(x, a, b, c, d, e):
-        return a * np.cos(2 * np.pi * x / b) + c + d * np.sin(2 * np.pi * x / b) + e
+        self.split()
     
-    def shoelace_area(signal_data_time,signal_data_value):
-        # Triển khai công thức Shoelace
-        area = 0
-        for signal_point in range(len(signal_data_time) - 1):
-            area +=(signal_data_time[signal_point]*signal_data_value[signal_point+1]) - (signal_data_time[signal_point + 1]*signal_data_value[signal_point])
+    
+    def fe_dist(self): # eculien
+        return euclidean((self.value[0],self.time[0]),(self.value[-1],self.time[-1]))
+       
+    def margin_diff(self):
+        return abs(self.value[-1]-self.value[0])
 
-        # Xử lý đa giác kín (kết nối điểm cuối cùng với điểm đầu tiên)
-        area += (signal_data_time[-1] * signal_data_value[0]) - (signal_data_time[0] * signal_data_value[-1])
+    def peakProp(self):
+        return abs(max(self.value)/min(self.value))
+    
+    def slope(self):
+        p1 = (self.value[0],self.time[0])
+        p2 = (max(self.value), self.time[np.argmax(self.value)])
+        p3 = (min(self.value),self.time[np.argmin(self.value)])
+        p4 = (self.value[-1],self.value[-1])
+        def arctan(left_point,right_point):
+            return np.tan((right_point[1]-left_point[1])/(right_point[0]-left_point[0]))
+        return arctan(p2,p1),arctan(p3,p2),arctan(p4,p3)
+    
+    def shoelace_area(self,points):
+        # Ensure the polygon is closed (first and last points are the same)
+        if not np.allclose(points[0], points[-1]):
+            points = np.vstack([points, points[0]])
 
-        return abs(area / 2.0)  
+        # Apply the Shoelace formula
+        y = np.array(points[:, 1])
+        x= np.arange(len(y))/50
+        area = 0.5 * np.abs(np.dot(x[:-1], y[1:]) - np.dot(y[:-1], x[1:]))
 
-    #Fix trục time theo value
-    signal_data_time=axis_fix(signal_data_time,signal_data_value)
+        return area
 
-    #Lấy nửa phần dữ liệu bên trái
-    top_peak=max(signal_data_value)
-    bot_peak=min(signal_data_value)
-    index_difference=signal_data_value.index(bot_peak)-signal_data_value.index(top_peak)
-    cut_point=int(index_difference/2)+signal_data_value.index(top_peak)
+   
 
-    half_left_value=signal_data_value[cut_point:]
-    half_left_time=signal_data_time[cut_point:]
+    def fit_ellipse(self,points):
+        x2=np.array(points[:,1])
+        x1=np.arange(len(x2))/50
 
-    #Thực hiện tìm giá trị bán trục lớn và nhỏ
-    a0 = 0.01  
-    b0 = 0.01  
-    c0 = 0.01  
-    d0 = 0.01  
-    e0 = 0.01  
-
-    # Thực hiện fitting
-    popt_left,_ = curve_fit(ellipse_func, half_left_time, half_left_value, p0=[a0, b0, c0, d0, e0])
-
-    #Tính diện tích ellipse
-    a=popt_left[0]
-    b=popt_left[1]
-    Se=np.pi*a*b
-
-    #Diện tích phần lồi
-    bulge_area=shoelace_area(half_left_time,half_left_value)
+        X = np.array(list(zip(x1, x2)))
+        reg = LsqEllipse().fit(X)
+        center, width, height, phi = reg.as_parameters()
+        radii=[width,height]
+        return center, radii,phi
+    
+    def compute_ellipse_area(self,radii):
+        # Extract parameters
+        radius_major, radius_minor = radii
         
-    #Độ fit với ellipse
-    fit_percentage=(Se-bulge_area)/Se
+        # Compute area
+        area = np.pi * radius_major * radius_minor
+        
+        return area
+    
+    # def plot_ellipse(center, radii, orientation, ax=None, color='blue', label=None):
+    #     if ax is None:
+    #         ax = plt.gca()
 
-    return fit_percentage
+    #     # Generate angle values from 0 to 2*pi
+    #     theta = np.linspace(0, 2*np.pi, 100)
 
+    #     # Compute ellipse points
+    #     x = center[0] + radii[0] * np.cos(theta) * np.cos(orientation) - radii[1] * np.sin(theta) * np.sin(orientation)
+    #     y = center[1] + radii[0] * np.cos(theta) * np.sin(orientation) + radii[1] * np.sin(theta) * np.cos(orientation)
+
+    #     # Plot ellipse
+    #     ax.plot(x, y, color=color, label=label)
+    #     ax.set_aspect('equal', 'box')
+    #     ax.grid(True)
+    #     ax.legend()
+
+    def split(self):
+        split_point = (np.argmin(self.value)+np.argmax(self.value)) // 2
+        self.left_list = np.vstack((self.time[0:split_point],self.value[0:split_point])).reshape(-1,2)
+        self.right_list = np.vstack((self.time[split_point:-1],self.value[split_point:-1])).reshape(-1,2)
+        self.ellipse_left = self.fit_ellipse(self.left_list)
+        self.ellipse_right = self.fit_ellipse(self.right_list)
+    
+    #Tỉ lệ phần thừa của ellipse 
+    def ellipse_prop(self,ellipse_list, left_list):
+        area_ellipse = self.compute_ellipse_area(ellipse_list)
+        area_left= self.shoelace_area(left_list)
+
+        area_prop=abs(area_ellipse-area_left)/area_ellipse
+
+        return area_prop 
+
+    #Standard deviation
+    def standard_deviation(self):
+        return np.std(np.array(self.value))
+    
+
+if __name__ == "__main__":
+    data = 'Label_GUI/All files labelling/output_labeling'
+    true_labeled_valuelist, true_labeled_timelist= read_label_files.read_label_file(data)
+    for i in range (len(true_labeled_timelist)):
+        instance = FeatureDefine(true_labeled_timelist[i],true_labeled_valuelist[i])
+        left_ellipse_fit= instance.ellipse_prop(instance.ellipse_left[1],instance.left_list)
+        right_ellipse_fit=instance.ellipse_prop(instance.ellipse_right[1],instance.right_list)
+        print("left elipse: ",left_ellipse_fit)
+        print("right elipse: ",right_ellipse_fit)
+        if left_ellipse_fit >=1:
+            print("Loi ti le")
+        elif right_ellipse_fit >=1:
+            print("Loi ti le")
+            
+
+    print("\n")
+    
+    # print(groups)
