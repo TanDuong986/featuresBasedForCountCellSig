@@ -10,19 +10,14 @@ import read_label_files
 from ellipse import LsqEllipse
 
 class FeatureDefine():
-    def __init__(self,value,time):
+    def __init__(self,value):
         self.value = value
-        self.time=time
-        self.numpoint = len(value)
-        self.label = False
+        self.time=np.arange(len(value))/50
         self.left_list = []
         self.right_list = []
         self.ellipse_left = None
         self.ellipse_right = None
 
-        self.prop_left =0
-        self.prop_right =0
-        
         self.split()
     
     
@@ -51,7 +46,7 @@ class FeatureDefine():
 
         # Apply the Shoelace formula
         y = np.array(points[:, 1])
-        x= np.arange(len(y))/50
+        x= np.array(points[:,0])
         area = 0.5 * np.abs(np.dot(x[:-1], y[1:]) - np.dot(y[:-1], x[1:]))
 
         return area
@@ -60,7 +55,7 @@ class FeatureDefine():
 
     def fit_ellipse(self,points):
         x2=np.array(points[:,1])
-        x1=np.arange(len(x2))/50
+        x1=np.array(points[:,0])
 
         X = np.array(list(zip(x1, x2)))
         reg = LsqEllipse().fit(X)
@@ -77,23 +72,6 @@ class FeatureDefine():
         
         return area
     
-    # def plot_ellipse(center, radii, orientation, ax=None, color='blue', label=None):
-    #     if ax is None:
-    #         ax = plt.gca()
-
-    #     # Generate angle values from 0 to 2*pi
-    #     theta = np.linspace(0, 2*np.pi, 100)
-
-    #     # Compute ellipse points
-    #     x = center[0] + radii[0] * np.cos(theta) * np.cos(orientation) - radii[1] * np.sin(theta) * np.sin(orientation)
-    #     y = center[1] + radii[0] * np.cos(theta) * np.sin(orientation) + radii[1] * np.sin(theta) * np.cos(orientation)
-
-    #     # Plot ellipse
-    #     ax.plot(x, y, color=color, label=label)
-    #     ax.set_aspect('equal', 'box')
-    #     ax.grid(True)
-    #     ax.legend()
-
     def split(self):
         split_point = (np.argmin(self.value)+np.argmax(self.value)) // 2
         self.left_list = np.vstack((self.time[0:split_point],self.value[0:split_point])).reshape(-1,2)
@@ -113,23 +91,4 @@ class FeatureDefine():
     #Standard deviation
     def standard_deviation(self):
         return np.std(np.array(self.value))
-    
 
-if __name__ == "__main__":
-    data = 'Label_GUI/All files labelling/output_labeling'
-    true_labeled_valuelist, true_labeled_timelist= read_label_files.read_label_file(data)
-    for i in range (len(true_labeled_timelist)):
-        instance = FeatureDefine(true_labeled_timelist[i],true_labeled_valuelist[i])
-        left_ellipse_fit= instance.ellipse_prop(instance.ellipse_left[1],instance.left_list)
-        right_ellipse_fit=instance.ellipse_prop(instance.ellipse_right[1],instance.right_list)
-        print("left elipse: ",left_ellipse_fit)
-        print("right elipse: ",right_ellipse_fit)
-        if left_ellipse_fit >=1:
-            print("Loi ti le")
-        elif right_ellipse_fit >=1:
-            print("Loi ti le")
-            
-
-    print("\n")
-    
-    # print(groups)
