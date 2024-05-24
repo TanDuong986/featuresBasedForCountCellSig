@@ -22,6 +22,9 @@ class ExtractFeature():
         #Lấy số lượng mẫu để trích xuất đặc trưng
         self.sample_true_instance,self.true_labeled_timelist,self.false_labeled_valuelist,self.false_labeled_timelist=read_label_files.read_label_file(folder_path=folder_path)
         self.sample_false_instance=self.false_labeled_valuelist[0:5000]
+        print(self.sample_true_instance[0:5])
+        print()
+        print(self.sample_false_instance[0:5])
 
     #Scaling
     def standard_scale(self,feature_list):
@@ -49,7 +52,7 @@ class ExtractFeature():
                 vertical_margin_diff=true_feature_calculate.margin_diff()
                 peakProp=true_feature_calculate.peakProp()
                 left_slope, mid_slope, right_slope=true_feature_calculate.slope()
-                left_ellipse_prop=true_feature_calculate.ellipse_prop(true_feature_calculate.ellipse_left[1],true_feature_calculate.left_list)
+                left_ellipse_prop=true_feature_calculate.ellipse_prop(true_feature_calculate.ellipse_left[1],true_feature_calculate.left_list) # 1 la index cua radii
                 right_ellipse_prop=true_feature_calculate.ellipse_prop(true_feature_calculate.ellipse_right[1],true_feature_calculate.right_list)
                 standard_deviation=true_feature_calculate.standard_deviation()
                 feature_list=[euclid_distance,vertical_margin_diff,peakProp,left_slope,mid_slope,right_slope,left_ellipse_prop,right_ellipse_prop,standard_deviation]

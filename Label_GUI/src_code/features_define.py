@@ -8,6 +8,7 @@ from itertools import groupby
 from scipy.optimize import minimize
 import read_label_files
 from ellipse import LsqEllipse
+import math
 
 class FeatureDefine():
     def __init__(self,value):
@@ -29,16 +30,21 @@ class FeatureDefine():
 
     def peakProp(self):
         return abs(max(self.value)/min(self.value))
+
     
     def slope(self):
         p1 = (self.value[0],self.time[0])
         p2 = (max(self.value), self.time[np.argmax(self.value)])
         p3 = (min(self.value),self.time[np.argmin(self.value)])
         p4 = (self.value[-1],self.value[-1])
+
+        
+
         def arctan(left_point,right_point):
-            return np.tan((right_point[1]-left_point[1])/(right_point[0]-left_point[0]))
-        return arctan(p2,p1),arctan(p3,p2),arctan(p4,p3)
-    
+            return math.atan2(right_point[1]-left_point[1], right_point[0]-left_point[0])
+
+        return arctan(p1,p2),arctan(p3,p2),arctan(p4,p3)
+
     def shoelace_area(self,points):
         # Ensure the polygon is closed (first and last points are the same)
         if not np.allclose(points[0], points[-1]):
@@ -78,8 +84,8 @@ class FeatureDefine():
         self.right_list = np.vstack((self.time[split_point:-1],self.value[split_point:-1])).reshape(-1,2)
         self.ellipse_left = self.fit_ellipse(self.left_list)
         self.ellipse_right = self.fit_ellipse(self.right_list)
-    
-    #Tỉ lệ phần thừa của ellipse 
+
+    #Tỉ lệ phần thừa của ellipse
     def ellipse_prop(self,ellipse_list, left_list):
         area_ellipse = self.compute_ellipse_area(ellipse_list)
         area_left= self.shoelace_area(left_list)
