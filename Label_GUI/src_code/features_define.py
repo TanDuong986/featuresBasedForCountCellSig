@@ -23,13 +23,13 @@ class FeatureDefine():
     
     
     def fe_dist(self): # eculien
-        return euclidean((self.value[0],self.time[0]),(self.value[-1],self.time[-1]))
+        return round(euclidean((self.value[0],self.time[0]),(self.value[-1],self.time[-1])),6)
        
     def margin_diff(self):
-        return abs(self.value[-1]-self.value[0])
+        return round(abs(self.value[-1]-self.value[0]),6)
 
     def peakProp(self):
-        return abs(max(self.value)/min(self.value))
+        return round(abs(max(self.value)/min(self.value)),6)
 
     
     def slope(self):
@@ -43,7 +43,7 @@ class FeatureDefine():
         def arctan(left_point,right_point):
             return math.atan2(right_point[1]-left_point[1], right_point[0]-left_point[0])
 
-        return arctan(p1,p2),arctan(p3,p2),arctan(p4,p3)
+        return round(arctan(p1,p2),arctan(p3,p2),arctan(p4,p3),6)
 
     def shoelace_area(self,points):
         # Ensure the polygon is closed (first and last points are the same)
@@ -55,7 +55,7 @@ class FeatureDefine():
         x= np.array(points[:,0])
         area = 0.5 * np.abs(np.dot(x[:-1], y[1:]) - np.dot(y[:-1], x[1:]))
 
-        return area
+        return round(area,6)
 
    
 
@@ -76,7 +76,7 @@ class FeatureDefine():
         # Compute area
         area = np.pi * radius_major * radius_minor
         
-        return area
+        return round(area,6)
     
     def split(self):
         split_point = (np.argmin(self.value)+np.argmax(self.value)) // 2
@@ -92,9 +92,9 @@ class FeatureDefine():
 
         area_prop=abs(area_ellipse-area_left)/area_ellipse
 
-        return area_prop 
+        return round(area_prop,6) 
 
     #Standard deviation
     def standard_deviation(self):
-        return np.std(np.array(self.value))
+        return round(np.std(np.array(self.value)),6)
 
