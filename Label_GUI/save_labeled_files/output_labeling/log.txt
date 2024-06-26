@@ -1,1 +1,0 @@
-{"src_path": "D:/Hoc/Phan_mem/Python/Run/featuresBasedForCountCellSig/Label_GUI/All files labelling", "des_path": "D:/Hoc/Phan_mem/Python/Run/featuresBasedForCountCellSig/Label_GUI/All files labelling\\output_labeling", "sum_file": 3941, "index": 0, "left_list": []}
