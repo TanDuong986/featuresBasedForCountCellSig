@@ -36,7 +36,7 @@ class FeatureDefine():
         p3 = (min(self.value),self.time[np.argmin(self.value)])
         p4 = (self.value[-1],self.value[-1])
         def arctan(left_point,right_point):
-            return np.tan((right_point[1]-left_point[1])/(right_point[0]-left_point[0]))
+            return np.tan((right_point[1]-left_point[1])/(right_point[0]-left_point[0]+1e-9))
         return arctan(p2,p1),arctan(p3,p2),arctan(p4,p3)
     
     def shoelace_area(self,points):
@@ -50,8 +50,6 @@ class FeatureDefine():
         area = 0.5 * np.abs(np.dot(x[:-1], y[1:]) - np.dot(y[:-1], x[1:]))
 
         return area
-
-   
 
     def fit_ellipse(self,points):
         x2=np.array(points[:,1])
@@ -92,3 +90,10 @@ class FeatureDefine():
     def standard_deviation(self):
         return np.std(np.array(self.value))
 
+if __name__ == "__main__":
+    
+    folder_path = 'Label_GUI\All files labelling\output_labeling'
+    true_labeled_valuelist, _, false_labeled_valuelist,_=read_label_files(folder_path)
+    for i in range(len(true_labeled_valuelist)):
+        feature=FeatureDefine(true_labeled_valuelist[i])
+        

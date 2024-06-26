@@ -223,10 +223,7 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
     def falseLabel(self):# intance assign to false
 
         try:
-            # self.data_processed.peak_detect(self.time_list,self.value_list)
-            # self.data_processed.data_split(self.time_list,self.value_list)
-            # start_index = np.where(self.df['time'] == self.listIns[self.index][0])[0][0]
-            # end_index = np.where(self.df['time'] == self.listIns[self.index][2])[0][0]
+            
             if self.num_box_done == len(self.data_processed.box):
                 # self.filename = self.all_input_file_name.pop()
                 self.num_box_done =0
@@ -383,7 +380,7 @@ class DataProcessing:
         while True:
             if total_time[i] in self.true_peak_time:
                 while i + 1 < len(total_time) and total_time[i + 1] in self.true_peak_time:
-                    total_time[i+1]=0
+                    total_time[i]=0
                     i=i+1
                 i=i+1
             elif total_time[i] in self.true_trough_time:
@@ -407,8 +404,8 @@ class DataProcessing:
 
         for i in range(int(((len(total_time)/2)))):
 
-            peak_diff_list=[]
-            trough_diff_list=[]
+            # peak_diff_list=[]
+            # trough_diff_list=[]
             signal_data_time=[]
 
             #Tìm vị trí tgian xuất hiện đỉnh, đáy
@@ -434,9 +431,9 @@ class DataProcessing:
                 former_peak_time=data_time[peak_index_reference-j-1]
                 later_peak_value=data_value[peak_index_reference-j]
                 former_peak_value=data_value[peak_index_reference-j-1]
-                peak_value_diff=later_peak_value-former_peak_value  
+                # peak_value_diff=later_peak_value-former_peak_value  
 
-                peak_diff_list.append(peak_value_diff)
+                # peak_diff_list.append(peak_value_diff)
                 signal_data_time.insert(0,former_peak_time)
 
                 
@@ -444,15 +441,18 @@ class DataProcessing:
                 if former_peak_value> later_peak_value:
                     del signal_data_time[0]
                     break
-                else:
-                    peak_check_item=0
-                    for peak_diff_index in range(len(peak_diff_list)-1):
-                        if peak_diff_list[peak_diff_index]>10*peak_diff_list[peak_diff_index+1]:
-                            peak_check_item=1
-                            break
-                    if peak_check_item==1:
-                        del signal_data_time[0]
-                        break
+                elif former_peak_value<0:
+                    del signal_data_time[0]
+                    break
+                # else:
+                #     peak_check_item=0
+                #     for peak_diff_index in range(len(peak_diff_list)-1):
+                #         if peak_diff_list[peak_diff_index]>10*peak_diff_list[peak_diff_index+1]:
+                #             peak_check_item=1
+                #             break
+                #     if peak_check_item==1:
+                #         del signal_data_time[0]
+                #         break
 
             #Lấy đoạn dữ liệu từ phía đỉnh đến đáy( đoạn giữa)
             for interval_time in range(peak_index_reference+1,trough_index_reference):
@@ -472,9 +472,9 @@ class DataProcessing:
                 later_trough_time=data_time[trough_index_reference+k+1]
                 former_trough_value=data_value[trough_index_reference+k]
                 later_trough_value=data_value[trough_index_reference+k+1]
-                trough_value_diff=later_trough_value-former_trough_value
+                # trough_value_diff=later_trough_value-former_trough_value
 
-                trough_diff_list.append(trough_value_diff)
+                # trough_diff_list.append(trough_value_diff)
                 signal_data_time.append(later_trough_time)
 
                 #Khi bắt được biên kề đáy
@@ -482,33 +482,26 @@ class DataProcessing:
                     #signal_data_value.pop()
                     signal_data_time.pop()
                     break
-                else:
-                    trough_check_item=0
-                    for trough_diff_index in range(len(trough_diff_list)-1):
-                        if trough_diff_list[trough_diff_index]>10*trough_diff_list[trough_diff_index+1]:
-                            trough_check_item=1
-                            break
-                    if trough_check_item==1:
-                        signal_data_time.pop()
-                        #signal_data_value.pop()
-                        break
+                elif later_trough_value>0:
+                    signal_data_time.pop()
+                    break
 
             #Đưa vector tín hiệu vào mảng tổng
             filtered_data_time.append(signal_data_time)
 
         #Lấy các cụm tế bào
         
-        #Gộp các tín hiệu có phần dữ liệu chung
-        for count in range(len(filtered_data_time)-1):
-            intersection_check=any(time in filtered_data_time[count] for time in filtered_data_time[count+1])
-            if intersection_check:
-                filtered_data_time[count+1]= filtered_data_time[count]+ filtered_data_time[count+1]
-                filtered_data_time[count]=[0]
+        # #Gộp các tín hiệu có phần dữ liệu chung
+        # for count in range(len(filtered_data_time)-1):
+        #     intersection_check=any(time in filtered_data_time[count] for time in filtered_data_time[count+1])
+        #     if intersection_check:
+        #         filtered_data_time[count+1]= filtered_data_time[count]+ filtered_data_time[count+1]
+        #         filtered_data_time[count]=[0]
         
-        filtered_data_time=[time for time in filtered_data_time if time!=[0]]
+        # filtered_data_time=[time for time in filtered_data_time if time!=[0]]
         
-        for last_count in range(len(filtered_data_time)):
-            filtered_data_time[last_count]=self.remove_duplicates(filtered_data_time[last_count]) 
+        # for last_count in range(len(filtered_data_time)):
+        #     filtered_data_time[last_count]=self.remove_duplicates(filtered_data_time[last_count]) 
         
         #Tham chiếu lại value cho phần cụm 
         for vector_number in range(len(filtered_data_time)):
