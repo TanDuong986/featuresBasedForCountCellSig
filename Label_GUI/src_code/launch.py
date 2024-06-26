@@ -94,9 +94,9 @@ class LabelApp(main.Ui_MainWindow, QtWidgets.QMainWindow):
 
         if not os.path.exists(self.out_folder_all): #check xem da co folder out chua
             os.makedirs(self.out_folder_all)
-            print(f'(X) Output folder does not exist. Created at \n{self.out_folder_all}\n')
+            print(f'😓 Output folder does not exist. Created at \n{self.out_folder_all}\n')
         else:
-            print(f"(V) Out folder have been existed at \n{self.out_folder_all}\n")
+            print(f"😍 Out folder have been existed at \n{self.out_folder_all}\n")
         
         self.readData()
 
